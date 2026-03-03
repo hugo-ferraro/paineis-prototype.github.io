@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics 360 - Gestão Estratégica e Tática</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#f0fdfa', 100: '#ccfbf1', 500: '#14b8a6', 600: '#0d9488', 900: '#134e4a' },
+                        alert: { warning: '#f59e0b', danger: '#ef4444', success: '#10b981', info: '#3b82f6', purple: '#8b5cf6' }
+                    },
+                    animation: { 'fade-in': 'fadeIn 0.3s ease-out' },
+                    keyframes: { fadeIn: { '0%': { opacity: '0', transform: 'translateY(5px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .drilldown-row { display: none; background-color: #f8fafc; }
+        .drilldown-row.active { display: table-row; }
+        .transition-transform { transition: transform 0.3s ease; }
+        .rotate-90 { transform: rotate(90deg); }
+        
+        .nav-link.active { background-color: rgba(20, 184, 166, 0.1); color: #14b8a6; border-right: 3px solid #14b8a6; }
+        .nav-link.inactive { color: #cbd5e1; border-right: 3px solid transparent; }
+        .nav-link.inactive:hover { background-color: #1e293b; color: white; }
+
+        .badge-estrategica { background-color: rgba(139, 92, 246, 0.1); color: #8b5cf6; border: 1px solid rgba(139, 92, 246, 0.2); }
+        .badge-institucional { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); }
+        .initiative-card.active { border-color: #14b8a6; background-color: #f0fdfa; box-shadow: 0 0 0 1px #14b8a6; }
+
+        .tab-btn.active { color: #14b8a6; border-bottom: 2px solid #14b8a6; background-color: white; }
+        .tab-btn.inactive { color: #64748b; border-bottom: 2px solid transparent; }
+        .tab-btn.inactive:hover { color: #334155; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s ease-out; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex overflow-hidden antialiased">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex z-20 shadow-xl shrink-0">
+        <div class="h-16 flex items-center px-6 bg-slate-950 border-b border-slate-800">
+            <i class="fa-solid fa-cube text-brand-500 text-2xl mr-3"></i>
+            <span class="text-white font-bold text-lg tracking-wide">Analytics 360</span>
+        </div>
+        
+        <div class="p-4 overflow-y-auto">
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 mt-2">Visão de Portfólio</div>
+            <nav class="space-y-1">
+                <a href="#" id="nav-executivo" onclick="switchView('executivo'); return false;" class="nav-link active flex items-center px-3 py-2.5 rounded group transition-colors">
+                    <i class="fa-solid fa-chart-pie w-6"></i>
+                    <span class="font-medium ml-2">Painel Executivo</span>
+                </a>
+                <a href="#" id="nav-metas" onclick="switchView('metas'); return false;" class="nav-link inactive flex items-center px-3 py-2.5 rounded group transition-colors">
+                    <i class="fa-solid fa-bullseye w-6"></i>
+                    <span class="font-medium ml-2">Metas & Indicadores</span>
+                </a>
+            </nav>
+
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 mt-8">Gestão Tática</div>
+            <nav class="space-y-1">
+                <a href="#" id="nav-iniciativas" onclick="switchView('iniciativas'); return false;" class="nav-link inactive flex items-center px-3 py-2.5 rounded group transition-colors">
+                    <i class="fa-solid fa-layer-group w-6"></i>
+                    <span class="font-medium ml-2">Iniciativas e Ações</span>
+                </a>
+            </nav>
+        </div>
+
+        <div class="mt-auto p-4 border-t border-slate-800 bg-slate-950">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold text-xs">CC</div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-white leading-tight">Casa Civil</p>
+                    <p class="text-xs text-slate-500">Gestão Estratégica</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden">
+        
+        <!-- Topbar -->
+        <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6 z-10 shrink-0">
+            <div class="flex items-center">
+                <h1 id="page-title" class="text-xl font-semibold text-slate-800">Painel Executivo do Plano</h1>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-slate-500 hidden sm:block"><i class="fa-regular fa-clock mr-1"></i> Atualizado hoje às 08:30</span>
+                <button class="bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center">
+                    <i class="fa-solid fa-download mr-2"></i> Exportar
+                </button>
+            </div>
+        </header>
+
+        <!-- VIEWS CONTAINER -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 relative bg-slate-50/50">
+            
+            <!-- ========================================== -->
+            <!-- VIEW 1: PAINEL EXECUTIVO                   -->
+            <!-- ========================================== -->
+            <div id="view-executivo" class="block animate-fade-in">
+                
+                <!-- 1.a. Filtros Executivo -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap gap-4 items-end">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Objetivo Estratégico</label>
+                        <select class="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option>Todos os Objetivos (PE 2025-2028)</option>
+                            <option>E2 - Tornar Salvador uma cidade inclusiva</option>
+                            <option>E3 - Economia Local Dinâmica</option>
+                            <option>E4 - Identidade cultural e turismo</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Órgão</label>
+                        <select class="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option>Todos os Órgãos</option><option>SUCOP</option><option>LIMPURB</option><option>SMED</option><option>SECULT</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Status</label>
+                        <select class="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option>Todos</option><option>Em Andamento</option><option>Atrasado / Risco</option><option>Concluído</option>
+                        </select>
+                    </div>
+                    <button class="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center justify-center h-[38px]">
+                        <i class="fa-solid fa-filter mr-2"></i> Filtrar
+                    </button>
+                </div>
+
+                <!-- 1.b. KPIs Executivo -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
+                        <div class="absolute -right-4 -top-4 p-4 opacity-[0.03] group-hover:scale-110 transition-transform"><i class="fa-solid fa-bullseye text-8xl text-brand-500"></i></div>
+                        <h3 class="text-sm font-semibold text-slate-500 mb-1">Total de Metas (Est. e Inst.)</h3>
+                        <div class="flex items-baseline space-x-2"><span class="text-3xl font-bold text-slate-800">148</span></div>
+                        <div class="flex gap-2 mt-4 text-xs font-medium">
+                            <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded">24 Estratégicas</span>
+                            <span class="bg-slate-100 text-slate-600 px-2 py-1 rounded">124 Institucionais</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
+                        <div class="absolute -right-4 -top-4 p-4 opacity-[0.03] group-hover:scale-110 transition-transform"><i class="fa-solid fa-list-check text-8xl text-blue-500"></i></div>
+                        <h3 class="text-sm font-semibold text-slate-500 mb-1">Execução Física Média</h3>
+                        <div class="flex items-baseline space-x-2">
+                            <span class="text-3xl font-bold text-slate-800">22%</span>
+                            <span class="text-xs font-medium text-alert-success bg-alert-success/10 px-2 py-0.5 rounded-full"><i class="fa-solid fa-arrow-up"></i> Início Ciclo</span>
+                        </div>
+                        <div class="w-full bg-slate-100 rounded-full h-2 mt-4"><div class="bg-blue-500 h-2 rounded-full" style="width: 22%"></div></div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
+                        <div class="absolute -right-4 -top-4 p-4 opacity-[0.03] group-hover:scale-110 transition-transform"><i class="fa-solid fa-check-double text-8xl text-alert-success"></i></div>
+                        <h3 class="text-sm font-semibold text-slate-500 mb-1">Metas No Prazo</h3>
+                        <div class="flex items-baseline space-x-2"><span class="text-3xl font-bold text-slate-800">110</span><span class="text-sm text-slate-500 font-medium">/ 148</span></div>
+                        <p class="text-xs text-alert-success font-medium mt-4"><i class="fa-solid fa-arrow-trend-up mr-1"></i> 74% de saúde do portfólio</p>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-alert-danger/30 flex flex-col relative overflow-hidden group bg-red-50/30">
+                        <h3 class="text-sm font-semibold text-alert-danger mb-1">Alerta: Metas Atrasadas/Críticas</h3>
+                        <div class="flex items-baseline space-x-2"><span class="text-3xl font-bold text-alert-danger">15</span><span class="text-sm text-alert-danger/70 font-medium">requerem ação</span></div>
+                        <div class="mt-4 space-y-2">
+                            <div class="flex justify-between items-center text-xs border-b border-alert-danger/10 pb-1"><span class="text-slate-700 font-medium">Atraso na Execução</span><span class="font-bold text-alert-danger">11</span></div>
+                            <div class="flex justify-between items-center text-xs border-b border-alert-danger/10 pb-1"><span class="text-slate-700 font-medium">Risco de Desvio</span><span class="font-bold text-alert-warning">4</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.c. e 1.d. Gráfico e Top Riscos -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h2 class="text-base font-bold text-slate-800">Evolução do Cumprimento por Objetivo Estratégico</h2>
+                                <p class="text-xs text-slate-500">Aderência física (%) em relação à meta prevista</p>
+                            </div>
+                        </div>
+                        <div class="relative h-64 w-full"><canvas id="chartObjExecutivo"></canvas></div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 overflow-y-auto" style="max-height: 340px;">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-base font-bold text-slate-800">Top Metas em Risco / Atraso</h2>
+                            <span class="text-[10px] uppercase tracking-wider bg-alert-danger/10 text-alert-danger font-bold px-2 py-1 rounded">Gestão por Exceção</span>
+                        </div>
+                        <div class="space-y-3">
+                            <div class="flex items-start p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:border-alert-danger/50 cursor-pointer">
+                                <div class="flex-shrink-0 mt-0.5"><i class="fa-solid fa-triangle-exclamation text-alert-danger"></i></div>
+                                <div class="ml-3 flex-1">
+                                    <div class="flex justify-between items-start">
+                                        <h4 class="text-sm font-bold text-slate-800">Conter 70 encostas até 2028</h4>
+                                        <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">SUCOP</span>
+                                    </div>
+                                    <div class="mt-2 flex items-center justify-between text-xs">
+                                        <span class="text-alert-danger font-semibold"><i class="fa-regular fa-clock"></i> Atraso: Real 2 / Meta 15</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-start p-3 bg-white rounded-lg border border-slate-200 shadow-sm hover:border-alert-danger/50 cursor-pointer">
+                                <div class="flex-shrink-0 mt-0.5"><i class="fa-solid fa-circle-exclamation text-alert-danger"></i></div>
+                                <div class="ml-3 flex-1">
+                                    <div class="flex justify-between items-start">
+                                        <h4 class="text-sm font-bold text-slate-800">Implantar 7 Ecopontos (PDE) até 2028</h4>
+                                        <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">LIMPURB</span>
+                                    </div>
+                                    <div class="mt-2 flex items-center justify-between text-xs">
+                                        <span class="text-alert-danger font-semibold"><i class="fa-solid fa-file-contract"></i> Aguardando licitação</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1.e. Tabela Resumo Consolidado -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                    <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-white">
+                        <h2 class="text-base font-bold text-slate-800">Consolidado do Portfólio (Objetivo → Iniciativa)</h2>
+                        <button class="text-brand-500 text-sm font-semibold hover:underline" onclick="switchView('iniciativas')">Ver detalhamento <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider border-b border-slate-200">
+                                    <th class="p-4 font-semibold w-10"></th>
+                                    <th class="p-4 font-semibold">Objetivo Estratégico / Iniciativa</th>
+                                    <th class="p-4 font-semibold">Órgão Resp.</th>
+                                    <th class="p-4 font-semibold">Status</th>
+                                    <th class="p-4 font-semibold text-center">Exec. Física</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm divide-y divide-slate-100">
+                                <tr class="hover:bg-slate-50 transition-colors cursor-pointer group" onclick="toggleRow('row-e2')">
+                                    <td class="p-4 text-center text-slate-400 group-hover:text-brand-500"><i class="fa-solid fa-chevron-right transition-transform" id="icon-row-e2"></i></td>
+                                    <td class="p-4 font-bold text-slate-800"><span class="inline-block w-2 h-2 rounded-full bg-blue-500 mr-2"></span>E2 - Tornar Salvador uma cidade inclusiva</td>
+                                    <td class="p-4 text-slate-600">Múltiplos</td>
+                                    <td class="p-4"><span class="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">Em Andamento</span></td>
+                                    <td class="p-4"><div class="flex items-center justify-center space-x-2"><span class="font-medium">38%</span><div class="w-16 bg-slate-200 rounded-full h-1.5"><div class="bg-blue-500 h-1.5 rounded-full" style="width: 38%"></div></div></div></td>
+                                </tr>
+                                <tr class="drilldown-row row-e2 border-none">
+                                    <td></td>
+                                    <td class="p-3 pl-8 text-slate-700"><i class="fa-solid fa-arrow-turn-up fa-rotate-90 text-slate-300 mr-2"></i>Cidade Educadora</td>
+                                    <td class="p-3 text-slate-500 text-xs">SMED</td>
+                                    <td class="p-3"><span class="text-xs text-alert-success font-semibold"><i class="fa-solid fa-circle text-[8px] mr-1"></i>No Prazo</span></td>
+                                    <td class="p-3 text-center text-slate-600">42%</td>
+                                </tr>
+                                <tr class="drilldown-row row-e2 border-none">
+                                    <td></td>
+                                    <td class="p-3 pl-8 text-slate-700"><i class="fa-solid fa-arrow-turn-up fa-rotate-90 text-slate-300 mr-2"></i>Salvador Cidadã</td>
+                                    <td class="p-3 text-slate-500 text-xs">SEMPRE</td>
+                                    <td class="p-3"><span class="text-xs text-alert-warning font-semibold"><i class="fa-solid fa-circle text-[8px] mr-1"></i>Atenção</span></td>
+                                    <td class="p-3 text-center text-slate-600">15%</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- VIEW 2: METAS E INDICADORES                -->
+            <!-- ========================================== -->
+            <div id="view-metas" class="hidden animate-fade-in">
+                
+                <!-- 2.a. Filtros Metas -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-wrap gap-4 items-end">
+                    <div class="flex-1 min-w-[200px]">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Objetivo Estratégico</label>
+                        <select class="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option>Todos os Objetivos</option><option>E2 - Cidade Inclusiva</option><option>E4 - Identidade Cultural</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Órgão</label>
+                        <select class="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option>Todos</option><option>SUCOP</option><option>LIMPURB</option><option>SMED</option><option>SECULT</option>
+                        </select>
+                    </div>
+                    <div class="flex-1 min-w-[150px]">
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Status</label>
+                        <select class="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option>Todos os Status</option><option>Atingidas / No Prazo</option><option>Em Risco</option><option>Críticas</option>
+                        </select>
+                    </div>
+                    <button class="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2 rounded-lg text-sm font-medium shadow-sm h-[38px]">Filtrar</button>
+                </div>
+
+                <!-- 2.b. KPIs Metas -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-alert-success flex flex-col justify-center">
+                        <div class="flex justify-between items-start">
+                            <div><p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Metas Atingidas / No Prazo</p><h4 class="text-3xl font-bold text-slate-800">110</h4></div>
+                            <div class="bg-alert-success/10 text-alert-success p-2 rounded-lg"><i class="fa-solid fa-check-circle text-xl"></i></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-alert-warning flex flex-col justify-center">
+                        <div class="flex justify-between items-start">
+                            <div><p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Em Risco (Atenção)</p><h4 class="text-3xl font-bold text-slate-800">23</h4></div>
+                            <div class="bg-alert-warning/10 text-alert-warning p-2 rounded-lg"><i class="fa-solid fa-triangle-exclamation text-xl"></i></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-alert-danger flex flex-col justify-center">
+                        <div class="flex justify-between items-start">
+                            <div><p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Críticas (Atrasadas)</p><h4 class="text-3xl font-bold text-slate-800">15</h4></div>
+                            <div class="bg-alert-danger/10 text-alert-danger p-2 rounded-lg"><i class="fa-solid fa-circle-xmark text-xl"></i></div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-alert-info flex flex-col justify-center">
+                        <div class="flex justify-between items-start">
+                            <div><p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Indicadores Atualizados</p><h4 class="text-3xl font-bold text-slate-800">92%</h4></div>
+                            <div class="bg-alert-info/10 text-alert-info p-2 rounded-lg"><i class="fa-solid fa-rotate-right text-xl"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2.c e 2.d. Gráficos de Metas -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- Evolução Meta Institucional -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <span class="badge-institucional px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">M. Institucional</span>
+                                <h2 class="text-base font-bold text-slate-800 mt-1">Evolução: Público em Equipamentos Culturais (SECULT)</h2>
+                            </div>
+                            <select class="bg-slate-50 border border-slate-200 text-slate-600 text-xs rounded px-2 py-1 focus:outline-none">
+                                <option>Alternar Indicador</option>
+                                <option>Recuperação de Recicláveis (LIMPURB)</option>
+                            </select>
+                        </div>
+                        <div class="relative h-64 w-full"><canvas id="chartEvolucaoInst"></canvas></div>
+                    </div>
+
+                    <!-- Progresso Médio: Metas Institucionais -->
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h2 class="text-base font-bold text-slate-800">Progresso Médio: Metas Institucionais</h2>
+                                <p class="text-xs text-slate-500 mt-1">Aderência (%) do órgão responsável no ciclo atual</p>
+                            </div>
+                        </div>
+                        <div class="relative h-64 w-full"><canvas id="chartInstitucionalOrgao"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- 2.e. Scorecard Analítico -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="p-5 border-b border-slate-200 flex justify-between items-center bg-white">
+                        <h2 class="text-base font-bold text-slate-800">Scorecard Analítico (Extração Oficial)</h2>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 text-[11px] uppercase tracking-wider border-b border-slate-200">
+                                    <th class="p-4 font-semibold w-24">Tipo</th>
+                                    <th class="p-4 font-semibold">Descrição do Indicador / Meta</th>
+                                    <th class="p-4 font-semibold">Órgão</th>
+                                    <th class="p-4 font-semibold text-right">Marco Zero</th>
+                                    <th class="p-4 font-semibold text-right">Meta (2028/29)</th>
+                                    <th class="p-4 font-semibold text-right">Valor Atual</th>
+                                    <th class="p-4 font-semibold text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm divide-y divide-slate-100">
+                                <!-- SUCOP -->
+                                <tr class="hover:bg-slate-50/80 transition-colors">
+                                    <td class="p-4 align-top"><span class="badge-institucional px-2 py-1 rounded text-[10px] font-bold block text-center">Inst.</span></td>
+                                    <td class="p-4 align-top">
+                                        <div class="font-bold text-slate-800">Conter 70 encostas até 2028</div>
+                                        <div class="text-[10px] text-slate-500 mt-1">Impacta: Proteger 150 áreas de riscos até 2028.</div>
+                                    </td>
+                                    <td class="p-4 align-top font-medium text-slate-600">SUCOP</td>
+                                    <td class="p-4 align-top text-right text-slate-500">0 uni.</td>
+                                    <td class="p-4 align-top text-right font-medium text-slate-800">70 uni.</td>
+                                    <td class="p-4 align-top text-right font-bold text-alert-danger">2 uni.</td>
+                                    <td class="p-4 align-top text-center"><span class="inline-flex items-center px-2 py-1 bg-alert-danger/10 text-alert-danger rounded text-[11px] font-bold"><i class="fa-solid fa-circle-xmark mr-1"></i> Crítica</span></td>
+                                </tr>
+                                <!-- LIMPURB -->
+                                <tr class="hover:bg-slate-50/80 transition-colors">
+                                    <td class="p-4 align-top"><span class="badge-institucional px-2 py-1 rounded text-[10px] font-bold block text-center">Inst.</span></td>
+                                    <td class="p-4 align-top">
+                                        <div class="font-bold text-slate-800">Recuperar 2.975 toneladas de recicláveis porta a porta</div>
+                                        <div class="text-[10px] text-slate-500 mt-1">Impacta: Aumentar recuperação de recicláveis para 6,74%.</div>
+                                    </td>
+                                    <td class="p-4 align-top font-medium text-slate-600">LIMPURB</td>
+                                    <td class="p-4 align-top text-right text-slate-500">0 ton.</td>
+                                    <td class="p-4 align-top text-right font-medium text-slate-800">2.975 t.</td>
+                                    <td class="p-4 align-top text-right font-bold text-slate-600">0 ton.</td>
+                                    <td class="p-4 align-top text-center"><span class="inline-flex items-center px-2 py-1 bg-alert-warning/10 text-alert-warning rounded text-[11px] font-bold"><i class="fa-solid fa-clock mr-1"></i> Aguardando</span></td>
+                                </tr>
+                                <!-- SMED -->
+                                <tr class="hover:bg-slate-50/80 transition-colors">
+                                    <td class="p-4 align-top"><span class="badge-institucional px-2 py-1 rounded text-[10px] font-bold block text-center">Inst.</span></td>
+                                    <td class="p-4 align-top">
+                                        <div class="font-bold text-slate-800">Aumentar a carga horária com professor programado</div>
+                                        <div class="text-[10px] text-slate-500 mt-1">Impacta: Aumentar índice de estudantes com nível adequado.</div>
+                                    </td>
+                                    <td class="p-4 align-top font-medium text-slate-600">SMED</td>
+                                    <td class="p-4 align-top text-right text-slate-500">95,91%</td>
+                                    <td class="p-4 align-top text-right font-medium text-slate-800">99,28%</td>
+                                    <td class="p-4 align-top text-right font-bold text-alert-success">96,5%</td>
+                                    <td class="p-4 align-top text-center"><span class="inline-flex items-center px-2 py-1 bg-alert-success/10 text-alert-success rounded text-[11px] font-bold"><i class="fa-solid fa-check-circle mr-1"></i> No Prazo</span></td>
+                                </tr>
+                                <!-- SEMOB -->
+                                <tr class="hover:bg-slate-50/80 transition-colors">
+                                    <td class="p-4 align-top"><span class="badge-institucional px-2 py-1 rounded text-[10px] font-bold block text-center">Inst.</span></td>
+                                    <td class="p-4 align-top">
+                                        <div class="font-bold text-slate-800">Renovar 100% da frota do transporte coletivo</div>
+                                        <div class="text-[10px] text-slate-500 mt-1">Impacta: Aumentar a satisfação dos passageiros para 60%.</div>
+                                    </td>
+                                    <td class="p-4 align-top font-medium text-slate-600">SEMOB</td>
+                                    <td class="p-4 align-top text-right text-slate-500">38%</td>
+                                    <td class="p-4 align-top text-right font-medium text-slate-800">100%</td>
+                                    <td class="p-4 align-top text-right font-bold text-brand-600">40%</td>
+                                    <td class="p-4 align-top text-center"><span class="inline-flex items-center px-2 py-1 bg-alert-success/10 text-alert-success rounded text-[11px] font-bold"><i class="fa-solid fa-check-circle mr-1"></i> No Prazo</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================== -->
+            <!-- VIEW 3: INICIATIVAS E LINHAS DE AÇÃO       -->
+            <!-- ========================================== -->
+            <div id="view-iniciativas" class="hidden animate-fade-in h-full flex flex-col">
+                
+                <div class="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+                    <!-- 3.a. Portfólio de Iniciativas (Sidebar) -->
+                    <div class="w-full lg:w-1/3 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                        <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+                            <h2 class="text-sm font-bold text-slate-800 uppercase tracking-wide">Portfólio de Iniciativas</h2>
+                        </div>
+                        <div class="p-3"><input type="text" placeholder="Buscar..." class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-sm focus:ring-1 focus:ring-brand-500"></div>
+                        <div class="flex-1 overflow-y-auto px-3 pb-4 space-y-3">
+                            <!-- Card 1 -->
+                            <div class="initiative-card active p-3 rounded-lg border border-slate-200 cursor-pointer">
+                                <div class="flex justify-between items-start mb-1">
+                                    <h4 class="text-sm font-bold text-slate-800">Cidade Educadora</h4>
+                                    <span class="text-[10px] bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded font-bold">SMED</span>
+                                </div>
+                                <div class="text-[10px] text-slate-500 mt-1">E2 - Cidade Inclusiva</div>
+                            </div>
+                            <!-- Card 2 -->
+                            <div class="initiative-card p-3 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
+                                <div class="flex justify-between items-start mb-1">
+                                    <h4 class="text-sm font-bold text-slate-800">Encosta Firme e Forte</h4>
+                                    <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">SUCOP</span>
+                                </div>
+                                <div class="text-[10px] text-slate-500 mt-1">Qualificar e revitalizar o Ambiente Urbano</div>
+                            </div>
+                            <!-- Card 3 -->
+                            <div class="initiative-card p-3 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50">
+                                <div class="flex justify-between items-start mb-1">
+                                    <h4 class="text-sm font-bold text-slate-800">Jogue Limpo com Salvador</h4>
+                                    <span class="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-bold">LIMPURB</span>
+                                </div>
+                                <div class="text-[10px] text-slate-500 mt-1">Qualificar e revitalizar o Ambiente Urbano</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detail Section -->
+                    <div class="w-full lg:w-2/3 flex flex-col gap-4 overflow-y-auto pb-6">
+                        
+                        <!-- 3.b. Quadro Resumo -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 relative">
+                            <div class="absolute top-0 left-0 w-1 h-full bg-brand-500"></div>
+                            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Quadro Resumo da Iniciativa</h2>
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span class="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold">SMED</span>
+                                <span class="text-[10px] bg-alert-success/10 text-alert-success px-2 py-0.5 rounded font-bold"><i class="fa-solid fa-check-circle mr-1"></i> Em Execução</span>
+                            </div>
+                            <h2 class="text-2xl font-bold text-slate-800 mb-1">Cidade Educadora</h2>
+                            <p class="text-sm text-slate-500">Promover formação, ampliar ações de recomposição da aprendizagem e focar no uso do Ambiente Virtual.</p>
+                        </div>
+
+                        <!-- 3.c. Metas Estratégicas Impactadas -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wide border-b border-slate-100 pb-2 mb-3">Metas Estratégicas Impactadas</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="border border-slate-200 rounded p-3 bg-slate-50/50">
+                                    <h4 class="text-xs font-bold text-slate-800">Reduzir a taxa de distorção idade-ano</h4>
+                                    <div class="mt-2 flex justify-between text-xs"><span class="text-slate-500">Meta Final (2028):</span><span class="font-bold text-brand-600">De 18,7% para 10%</span></div>
+                                </div>
+                                <div class="border border-slate-200 rounded p-3 bg-slate-50/50">
+                                    <h4 class="text-xs font-bold text-slate-800">Elevar o índice do IDEB</h4>
+                                    <div class="mt-2 flex justify-between text-xs"><span class="text-slate-500">Meta Final (2028):</span><span class="font-bold text-brand-600">De 5,3 para 6,5</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3.d e 3.e. Tabs (Linhas e Entregas) -->
+                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <!-- Tab Headers -->
+                            <div class="flex border-b border-slate-200 bg-slate-50">
+                                <button id="tab-btn-linhas" onclick="switchTab('linhas')" class="tab-btn active px-6 py-3 text-sm font-bold w-1/2">Linhas de Ação</button>
+                                <button id="tab-btn-entregas" onclick="switchTab('entregas')" class="tab-btn inactive px-6 py-3 text-sm font-bold w-1/2">Entregas e Marcos</button>
+                            </div>
+
+                            <!-- Tab Content: Linhas de Ação -->
+                            <div id="tab-linhas" class="tab-content active p-0">
+                                <ul class="divide-y divide-slate-100">
+                                    <li class="p-4 hover:bg-slate-50 transition-colors flex items-start">
+                                        <div class="w-8 h-8 rounded bg-brand-50 flex items-center justify-center text-brand-500 shrink-0 mt-0.5"><i class="fa-solid fa-chalkboard-user"></i></div>
+                                        <div class="ml-3">
+                                            <h4 class="text-sm font-bold text-slate-800">Apoio ao Estudante e Recomposição</h4>
+                                            <p class="text-xs text-slate-500 mt-1">Ampliar atendimento focado em recomposição da aprendizagem utilizando o AVA.</p>
+                                        </div>
+                                    </li>
+                                    <li class="p-4 hover:bg-slate-50 transition-colors flex items-start">
+                                        <div class="w-8 h-8 rounded bg-brand-50 flex items-center justify-center text-brand-500 shrink-0 mt-0.5"><i class="fa-solid fa-id-card-clip"></i></div>
+                                        <div class="ml-3">
+                                            <h4 class="text-sm font-bold text-slate-800">Programa Aluno Presente</h4>
+                                            <p class="text-xs text-slate-500 mt-1">Garantir engajamento escolar e preparação intensiva para avaliações de desempenho (PROSA).</p>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Tab Content: Entregas e Atrasos -->
+                            <div id="tab-entregas" class="tab-content p-4">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="text-xs text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                                            <th class="pb-3 font-semibold">Descrição da Entrega</th>
+                                            <th class="pb-3 font-semibold">Previsão</th>
+                                            <th class="pb-3 font-semibold">Status</th>
+                                            <th class="pb-3 font-semibold">Análise de Atraso</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-sm divide-y divide-slate-100">
+                                        <tr>
+                                            <td class="py-3 font-medium text-slate-800">Programa Aluno Líder implantado</td>
+                                            <td class="py-3 text-slate-600">Set/2025</td>
+                                            <td class="py-3"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-bold">A Iniciar</span></td>
+                                            <td class="py-3 text-xs text-slate-500">-</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-3 font-medium text-slate-800">Professores formadores selecionados</td>
+                                            <td class="py-3 text-slate-600">Fev/2026</td>
+                                            <td class="py-3"><span class="bg-alert-success/10 text-alert-success px-2 py-1 rounded text-[10px] font-bold">Concluído</span></td>
+                                            <td class="py-3 text-xs text-alert-success font-semibold">Entregue no prazo</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="py-3 font-medium text-slate-800">Resultados das avaliações PROSA</td>
+                                            <td class="py-3 text-slate-600">Jan/2026</td>
+                                            <td class="py-3"><span class="bg-alert-danger/10 text-alert-danger px-2 py-1 rounded text-[10px] font-bold">Atrasado</span></td>
+                                            <td class="py-3 text-xs text-alert-danger font-semibold"><i class="fa-solid fa-triangle-exclamation"></i> Atraso de 45 dias na compilação.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- JavaScript Base -->
+    <script>
+        // View Switcher (Preservado)
+        function switchView(viewName) {
+            ['executivo', 'metas', 'iniciativas'].forEach(v => {
+                document.getElementById('view-' + v).classList.add('hidden');
+                document.getElementById('nav-' + v).classList.remove('active', 'bg-brand-500/10', 'text-brand-500');
+                document.getElementById('nav-' + v).classList.add('inactive');
+            });
+            
+            document.getElementById('view-' + viewName).classList.remove('hidden');
+            document.getElementById('nav-' + viewName).classList.remove('inactive');
+            document.getElementById('nav-' + viewName).classList.add('active', 'bg-brand-500/10', 'text-brand-500');
+            
+            const titles = { 'executivo': 'Painel Executivo do Plano', 'metas': 'Metas & Indicadores', 'iniciativas': 'Iniciativas e Linhas de Ação' };
+            document.getElementById('page-title').innerText = titles[viewName];
+        }
+
+        // Tab Switcher (Iniciativas - Requisito 3.d e 3.e)
+        function switchTab(tabName) {
+            ['linhas', 'entregas'].forEach(t => {
+                document.getElementById('tab-' + t).classList.remove('active');
+                document.getElementById('tab-btn-' + t).classList.remove('active');
+                document.getElementById('tab-btn-' + t).classList.add('inactive');
+            });
+            document.getElementById('tab-' + tabName).classList.add('active');
+            document.getElementById('tab-btn-' + tabName).classList.remove('inactive');
+            document.getElementById('tab-btn-' + tabName).classList.add('active');
+        }
+
+        // Drilldown (Preservado)
+        function toggleRow(rowClass) {
+            const rows = document.querySelectorAll(`.${rowClass}`);
+            const icon = document.getElementById(`icon-${rowClass}`);
+            let isExpanding = false;
+            rows.forEach(row => {
+                if (row.classList.contains('active')) row.classList.remove('active');
+                else { row.classList.add('active'); isExpanding = true; }
+            });
+            if (isExpanding) icon.classList.add('rotate-90'); else icon.classList.remove('rotate-90');
+        }
+
+        // ChartJS Initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.color = '#64748b';
+
+            // 1.c. Gráfico: Evolução do Cumprimento por Objetivo Estratégico
+            new Chart(document.getElementById('chartObjExecutivo').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['E2 - Cidade Inclusiva', 'E3 - Economia Local', 'E4 - Identidade Cultural', 'E5 - Inovação Institucional'],
+                    datasets: [{ label: 'Aderência (%)', data: [78, 62, 85, 45], backgroundColor: '#14b8a6', borderRadius: 4, barPercentage: 0.5 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { max: 100, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } }
+            });
+
+            // 2.c. Gráfico: Evolução Meta Institucional (SECULT)
+            new Chart(document.getElementById('chartEvolucaoInst').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['2024', '2025 (Prev)', '2026 (Prev)', '2027 (Prev)', '2028 (Meta)'],
+                    datasets: [
+                        { label: 'Público Realizado', data: [512578, 540000, null, null, null], borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', borderWidth: 3, fill: true, tension: 0.3 },
+                        { label: 'Projeção / Meta', data: [512578, 563835, 620219, 682241, 750465], borderColor: '#cbd5e1', borderWidth: 2, borderDash: [5, 5], fill: false, pointRadius: 0 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { usePointStyle: true } } }, scales: { y: { grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } }
+            });
+
+            // 2.d. Progresso Médio: Metas Institucionais
+            new Chart(document.getElementById('chartInstitucionalOrgao').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['SMED', 'SECULT', 'SEMOB', 'SUCOP', 'LIMPURB'],
+                    datasets: [{
+                        data: [96, 88, 70, 40, 15], 
+                        backgroundColor: function(ctx) { const v = ctx.dataset.data[ctx.dataIndex]; return v >= 80 ? '#10b981' : v >= 50 ? '#f59e0b' : '#ef4444'; },
+                        borderRadius: 4, barPercentage: 0.6
+                    }]
+                },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { max: 100, grid: { color: '#f1f5f9' } }, y: { grid: { display: false } } } }
+            });
+        });
+    </script>
+</body>
+</html>
